@@ -20,7 +20,7 @@ features = ["max_level_debug", "release_max_level_warn"]
 
 [dependencies]
 serde = { version = "1.0.219", features = ["derive"] }
-ron = "0.9.0"
+ron = "0.11.0"
 
 [features]
 dev = [
