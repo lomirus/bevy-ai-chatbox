@@ -1,0 +1,3 @@
+[alias]
+rd = "run --features dev"
+br = "build --release"
