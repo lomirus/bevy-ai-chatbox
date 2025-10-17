@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 
+
 #[derive(Default, Deserialize, Serialize, Resource)]
 pub(crate) struct Config {
     pub(crate) api_key: String,
@@ -30,15 +31,3 @@ impl Config {
         }
     }
 }
-
-
-pub(crate) struct ConfigPlugin;
-
-impl Plugin for ConfigPlugin {
-    fn build(&self, app: &mut App) {
-        let config = Config::get_or_init();
-        app.insert_resource(config);
-    }
-}
-
-

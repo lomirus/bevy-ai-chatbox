@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod config;
+mod ai;
 
 use std::fs;
 
@@ -17,8 +17,10 @@ use bevy::{
 use crossbeam_channel::Receiver;
 use futures::{StreamExt, pin_mut};
 
+use ai::{AiPlugin, Config};
 use deepseek_api::Model;
-use config::{Config, ConfigPlugin};
+
+use crate::ai::Dialog;
 
 const DEFAULT_FONT_PATH: &str = "assets/fonts/NotoSansSC-Regular.ttf";
 
@@ -75,20 +77,17 @@ fn on_button_click(
     mut button_query: Query<(), With<SendButton>>,
     tokio_runtime: Res<TokioRuntime>,
     config: Res<Config>,
+    dialog: Res<Dialog>,
     mut commands: Commands,
 ) {
     if button_query.get_mut(event.event_target()).is_ok() {
         let client = deepseek_api::Client::new(Model::DeepSeekChat, &config.api_key);
-        let messages = vec![
-            deepseek_api::Message::system("你是一个智能助手。"),
-            deepseek_api::Message::user("你好！"),
-        ];
-
+        let messages = dialog.clone();
         let (tx, rx) = crossbeam_channel::unbounded();
         commands.insert_resource(MessageReceiver(rx));
+
         tokio_runtime.spawn(async move {
-            let stream = client.streaming_chat(messages);
-            let stream = stream.await;
+            let stream = client.streaming_chat(messages).await;
             pin_mut!(stream);
             while let Some(chunk) = stream.next().await {
                 assert_eq!(chunk.choices.len(), 1);
@@ -119,7 +118,7 @@ fn main() {
     let runtime = tokio::runtime::Runtime::new().unwrap();
 
     let mut app = App::new();
-    app.add_plugins((DefaultPlugins, FeathersPlugins, ConfigPlugin));
+    app.add_plugins((DefaultPlugins, FeathersPlugins, AiPlugin));
 
     let font_data = fs::read(DEFAULT_FONT_PATH).unwrap();
     let asset = Font::try_from_bytes(font_data).unwrap();
