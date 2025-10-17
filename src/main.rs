@@ -1,5 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod config;
+
 use std::fs;
 
 use bevy::{
@@ -13,8 +15,10 @@ use bevy::{
     ui::Pressed,
 };
 use crossbeam_channel::Receiver;
-use deepseek_api::Model;
 use futures::{StreamExt, pin_mut};
+
+use deepseek_api::Model;
+use config::{Config, ConfigPlugin};
 
 const DEFAULT_FONT_PATH: &str = "assets/fonts/NotoSansSC-Regular.ttf";
 
@@ -70,13 +74,14 @@ fn on_button_click(
     event: On<Add, Pressed>,
     mut button_query: Query<(), With<SendButton>>,
     tokio_runtime: Res<TokioRuntime>,
+    config: Res<Config>,
     mut commands: Commands,
 ) {
     if button_query.get_mut(event.event_target()).is_ok() {
-        let client = deepseek_api::Client::new(Model::DeepSeekChat, "");
+        let client = deepseek_api::Client::new(Model::DeepSeekChat, &config.api_key);
         let messages = vec![
             deepseek_api::Message::system("你是一个智能助手。"),
-            deepseek_api::Message::user("你好！请给我讲一个故事"),
+            deepseek_api::Message::user("你好！"),
         ];
 
         let (tx, rx) = crossbeam_channel::unbounded();
@@ -114,7 +119,7 @@ fn main() {
     let runtime = tokio::runtime::Runtime::new().unwrap();
 
     let mut app = App::new();
-    app.add_plugins((DefaultPlugins, FeathersPlugins));
+    app.add_plugins((DefaultPlugins, FeathersPlugins, ConfigPlugin));
 
     let font_data = fs::read(DEFAULT_FONT_PATH).unwrap();
     let asset = Font::try_from_bytes(font_data).unwrap();

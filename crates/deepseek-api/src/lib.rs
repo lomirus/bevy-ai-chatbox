@@ -21,14 +21,14 @@ pub enum Model {
 
 pub struct Client {
     model: Model,
-    token: String,
+    api_key: String,
 }
 
 impl Client {
-    pub fn new(model: Model, token: &str) -> Self {
+    pub fn new(model: Model, api_key: &str) -> Self {
         Self {
             model,
-            token: token.to_string(),
+            api_key: api_key.to_string(),
         }
     }
 
@@ -39,7 +39,7 @@ impl Client {
             .post(API_URL)
             .header("Content-Type", "application/json")
             .header("Accept", "application/json")
-            .header("Authorization", format!("Bearer {}", self.token))
+            .header("Authorization", format!("Bearer {}", self.api_key))
             .body(
                 serde_json::to_string(&ChatCompletionRequest {
                     model: self.model.clone(),
@@ -61,7 +61,7 @@ impl Client {
             .post(API_URL)
             .header("Content-Type", "application/json")
             .header("Accept", "application/json")
-            .header("Authorization", format!("Bearer {}", self.token))
+            .header("Authorization", format!("Bearer {}", self.api_key))
             .body(
                 serde_json::to_string(&ChatCompletionRequest {
                     model: self.model.clone(),
