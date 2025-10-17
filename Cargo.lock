@@ -288,9 +288,13 @@ name = "bevy-ai-chatbox"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "crossbeam-channel",
+ "deepseek-api",
+ "futures",
  "log",
  "ron 0.11.0",
  "serde",
+ "tokio",
 ]
 
 [[package]]
