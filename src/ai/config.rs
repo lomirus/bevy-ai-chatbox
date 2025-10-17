@@ -4,7 +4,6 @@ use bevy::prelude::*;
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Default, Deserialize, Serialize, Resource)]
 pub(crate) struct Config {
     pub(crate) api_key: String,

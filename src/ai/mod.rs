@@ -8,7 +8,7 @@ pub(crate) use dialog::Dialog;
 
 use bevy::prelude::*;
 
-use chat::{on_send_message, read_stream, TokioRuntime};
+use chat::{TokioRuntime, on_send_message, read_stream};
 
 pub(crate) struct AiPlugin;
 

@@ -43,7 +43,7 @@ impl Client {
             .body(
                 serde_json::to_string(&ChatCompletionRequest {
                     model: self.model.clone(),
-                    messages: messages,
+                    messages,
                     stream: false,
                 })
                 .unwrap(),
@@ -54,7 +54,6 @@ impl Client {
         resp.json::<Response>().await.unwrap()
     }
 
-    #[must_use]
     pub async fn streaming_chat(&self, messages: Vec<Message>) -> impl Stream<Item = Chunk> {
         let client = reqwest::Client::new();
         let mut resp = client
@@ -65,7 +64,7 @@ impl Client {
             .body(
                 serde_json::to_string(&ChatCompletionRequest {
                     model: self.model.clone(),
-                    messages: messages,
+                    messages,
                     stream: true,
                 })
                 .unwrap(),

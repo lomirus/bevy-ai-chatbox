@@ -39,7 +39,7 @@ pub(crate) fn on_send_message(
     }
     if let Some(message) = send_message.read().next() {
         let client = deepseek_api::Client::new(Model::DeepSeekChat, &config.api_key);
-        dialog.0.push(deepseek_api::Message::user(&message));
+        dialog.0.push(deepseek_api::Message::user(message));
         let messages = dialog.clone();
         let (tx, rx) = crossbeam_channel::unbounded();
         commands.insert_resource(StreamReceiver(rx));
