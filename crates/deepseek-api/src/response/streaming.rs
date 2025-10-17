@@ -16,7 +16,7 @@ pub struct Chunk {
     pub object: Object,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Choice {
     pub index: u64,
     pub finish_reason: Option<FinishReason>,
@@ -24,7 +24,7 @@ pub struct Choice {
     pub logprobs: Value,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Delta {
     pub content: String,
     pub reasoning_content: Option<String>,

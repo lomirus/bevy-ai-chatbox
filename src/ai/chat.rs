@@ -3,22 +3,19 @@ use crossbeam_channel::Receiver;
 use futures::{StreamExt, pin_mut};
 
 use super::{Config, Dialog};
-use deepseek_api::Model;
+use deepseek_api::{FinishReason, Model, streaming::Choice};
 
 #[derive(Resource, Deref)]
 pub(crate) struct TokioRuntime(pub(crate) tokio::runtime::Runtime);
 
 #[derive(Resource)]
-pub(crate) struct StreamReceiver(Receiver<String>);
+pub(crate) struct StreamReceiver(Receiver<Choice>);
 
 #[derive(Message, Deref)]
 pub(crate) struct SendMessage(String);
 
 #[derive(Message, Deref)]
 pub(crate) struct ReceiveMessage(pub(crate) String);
-
-#[derive(Resource)]
-pub(crate) struct IsChatting;
 
 impl SendMessage {
     pub(crate) fn new(message: &str) -> Self {
@@ -32,9 +29,10 @@ pub(crate) fn on_send_message(
     mut dialog: ResMut<Dialog>,
     tokio_runtime: Res<TokioRuntime>,
     config: Res<Config>,
-    is_chatting: Option<Res<IsChatting>>,
+    stream_receiver: Option<ResMut<StreamReceiver>>,
 ) {
-    if is_chatting.is_some() {
+    let is_chatting = stream_receiver.is_some();
+    if is_chatting {
         return;
     }
     if let Some(message) = send_message.read().next() {
@@ -49,19 +47,28 @@ pub(crate) fn on_send_message(
             pin_mut!(stream);
             while let Some(chunk) = stream.next().await {
                 assert_eq!(chunk.choices.len(), 1);
-                tx.send(chunk.choices[0].delta.content.clone()).unwrap();
+                tx.send(chunk.choices[0].clone()).unwrap();
             }
         });
     }
 }
 
 pub(crate) fn read_stream(
+    mut commands: Commands,
     stream_receiver: Option<ResMut<StreamReceiver>>,
     mut receive_message: MessageWriter<ReceiveMessage>,
 ) {
     if let Some(receiver) = stream_receiver {
         for chunk in receiver.0.try_iter() {
-            receive_message.write(ReceiveMessage(chunk));
+            match chunk.finish_reason {
+                Some(FinishReason::Stop) => {
+                    commands.remove_resource::<StreamReceiver>();
+                    break;
+                }
+                _ => {
+                    receive_message.write(ReceiveMessage(chunk.delta.content));
+                }
+            }
         }
     }
 }

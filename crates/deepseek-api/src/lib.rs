@@ -4,10 +4,11 @@ mod response;
 use async_stream::stream;
 use futures::Stream;
 use request::ChatCompletionRequest;
-use response::{Chunk, Response};
+use response::{streaming::Chunk, Response};
 use serde::{Deserialize, Serialize};
 
 pub use request::Message;
+pub use response::{streaming, FinishReason};
 
 const API_URL: &str = "https://api.deepseek.com/chat/completions";
 

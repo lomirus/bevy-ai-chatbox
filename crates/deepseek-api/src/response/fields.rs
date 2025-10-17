@@ -27,7 +27,7 @@ struct Function {
     arguments: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum FinishReason {
     #[serde(rename = "stop")]
     Stop,
@@ -56,7 +56,7 @@ pub struct CompletionTokensDetails {
     reasoning_tokens: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Role {
     #[serde(rename = "assistant")]
     Assistant,
