@@ -21,6 +21,7 @@ features = [
     "bevy_winit",
     "bevy_ui_render",
     "bevy_picking",
+    "bevy_log",
     "experimental_bevy_feathers",
 ]
 
@@ -37,7 +38,6 @@ dev = [
     "bevy/dynamic_linking",
     "bevy/bevy_ui_debug",
     "bevy/bevy_dev_tools",
-    "bevy/bevy_log",
     "bevy/debug",
 ]
 
