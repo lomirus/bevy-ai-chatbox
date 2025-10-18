@@ -24,12 +24,44 @@ const DEFAULT_FONT_PATH: &str = "assets/fonts/NotoSansSC-Regular.ttf";
 
 #[derive(Component)]
 struct SendButton;
-
 #[derive(Component)]
 enum MessageRole {
     System,
     User,
     Assistant,
+}
+
+fn message_box(role: MessageRole, content: String, is_streaming: bool) -> impl Bundle + use<> {
+    use MessageRole::*;
+    (
+        Node {
+            justify_content: match role {
+                System => JustifyContent::Center,
+                User => JustifyContent::End,
+                Assistant => JustifyContent::Start,
+            },
+            ..default()
+        },
+        children![(
+            Node {
+                border: UiRect::all(px(2)),
+                ..default()
+            },
+            BorderColor::all(match role {
+                System => Srgba::hex("#E6A23C").unwrap(),
+                User => Srgba::hex("#67C23A").unwrap(),
+                Assistant => Srgba::hex("#409EFF").unwrap(),
+            }),
+            Children::spawn(SpawnWith(move |parent: &mut ChildSpawner| {
+                if is_streaming {
+                    parent.spawn((Text::new(content), StreamingMessage));
+                } else {
+                    parent.spawn(Text::new(content));
+                }
+            })),
+        )],
+        role,
+    )
 }
 
 #[derive(Component)]
@@ -66,9 +98,10 @@ fn ui(messages: Vec<deepseek_api::Message>) -> impl Bundle {
                     flex_direction: FlexDirection::Column,
                     ..default()
                 },
-                Children::spawn(SpawnIter(messages.into_iter().map(|message| (
-                    Into::<MessageRole>::into(message.role),
-                    Text::new(&message.content),
+                Children::spawn(SpawnIter(messages.into_iter().map(|message| message_box(
+                    message.role.into(),
+                    message.content,
+                    false
                 ))))
             ),
             (
@@ -106,7 +139,11 @@ fn update_send_message(
 
     for send_message in send_message.read() {
         let message_box = commands
-            .spawn((Node::default(), children![Text::new(&send_message.0)]))
+            .spawn(message_box(
+                MessageRole::User,
+                send_message.0.clone(),
+                false,
+            ))
             .id();
         commands.entity(dialog).add_child(message_box);
     }
@@ -115,7 +152,7 @@ fn update_send_message(
 fn update_receive_message(
     mut receive_message: MessageReader<ReceiveMessage>,
     mut dialog: Query<Entity, With<Dialog>>,
-    mut message_query: Query<(Entity, &mut Text), With<StreamingMessage>>,
+    mut text_query: Query<(Entity, &mut Text), With<StreamingMessage>>,
     mut commands: Commands,
 ) {
     let dialog = dialog.single_mut().unwrap();
@@ -124,7 +161,7 @@ fn update_receive_message(
         return;
     }
 
-    match message_query.single_mut() {
+    match text_query.single_mut() {
         Ok((entity, mut text)) => {
             for receive_message in receive_message {
                 text.0 += &receive_message.content;
@@ -134,20 +171,17 @@ fn update_receive_message(
             }
         }
         Err(QuerySingleError::NoEntities(_)) => {
-            let mut text = Text::new("");
+            let mut text = String::new();
             let mut is_finished = false;
             for receive_message in receive_message {
-                text.0 += &receive_message.content;
+                text += &receive_message.content;
                 if receive_message.finished {
                     is_finished = true;
                 }
             }
-            let message_box = if is_finished {
-                commands.spawn((MessageRole::Assistant, text))
-            } else {
-                commands.spawn((MessageRole::Assistant, StreamingMessage, text))
-            }
-            .id();
+            let message_box = commands
+                .spawn(message_box(MessageRole::Assistant, text, !is_finished))
+                .id();
             commands.entity(dialog).add_child(message_box);
         }
         _ => unreachable!(),
