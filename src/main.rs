@@ -6,19 +6,22 @@ mod ui_scroll;
 use std::fs;
 
 use bevy::{
-    ecs::query::QuerySingleError,
+    ecs::{query::QuerySingleError, relationship::RelatedSpawner},
     feathers::{
         FeathersPlugins,
         controls::{ButtonProps, ButtonVariant, button},
         dark_theme::create_dark_theme,
         theme::{ThemedText, UiTheme},
     },
+    picking::hover::Hovered,
     prelude::*,
-    ui_widgets::{Activate, observe},
+    ui_widgets::{Activate, ControlOrientation, CoreScrollbarThumb, Scrollbar, observe},
 };
 
 use ai::{AiPlugin, ReceiveMessage, SendMessage};
 use ui_scroll::UiScrollPlugin;
+
+use crate::ui_scroll::GRAY1;
 
 const DEFAULT_FONT_PATH: &str = "assets/fonts/NotoSansSC-Regular.ttf";
 
@@ -85,48 +88,84 @@ struct Dialog;
 fn ui(messages: Vec<deepseek_api::Message>) -> impl Bundle {
     (
         Node {
+            display: Display::Grid,
             width: percent(100),
             height: percent(100),
-            flex_direction: FlexDirection::Column,
-            overflow: Overflow::scroll_y(),
+            grid_template_columns: vec![RepeatedGridTrack::flex(1, 1.), RepeatedGridTrack::auto(1)],
+            grid_template_rows: vec![RepeatedGridTrack::flex(1, 1.), RepeatedGridTrack::auto(1)],
             ..default()
         },
-        children![
-            (
-                Dialog,
+        Children::spawn(SpawnWith(|parent: &mut RelatedSpawner<ChildOf>| {
+            let scroll_area_id = parent
+                .spawn((
+                    Dialog,
+                    Node {
+                        flex_direction: FlexDirection::Column,
+                        overflow: Overflow::scroll(),
+                        ..default()
+                    },
+                    Children::spawn(SpawnIter(messages.into_iter().map(|message| {
+                        message_box(message.role.into(), message.content, false)
+                    }))),
+                ))
+                .id();
+
+            parent.spawn((
                 Node {
-                    flex_direction: FlexDirection::Column,
+                    min_width: px(8),
+                    grid_row: GridPlacement::start(1),
+                    grid_column: GridPlacement::start(2),
                     ..default()
                 },
-                Children::spawn(SpawnIter(messages.into_iter().map(|message| message_box(
-                    message.role.into(),
-                    message.content,
-                    false
-                ))))
-            ),
-            (
+                Scrollbar {
+                    orientation: ControlOrientation::Vertical,
+                    target: scroll_area_id,
+                    min_thumb_length: 8.0,
+                },
+                Children::spawn(Spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        ..default()
+                    },
+                    Hovered::default(),
+                    BackgroundColor(GRAY1.into()),
+                    BorderRadius::all(px(4)),
+                    CoreScrollbarThumb,
+                ))),
+            ));
+
+            parent.spawn((
                 Node {
-                    width: px(200),
+                    grid_row: GridPlacement::start(2),
+                    grid_column: GridPlacement::start_span(1, 2),
+                    padding: UiRect::all(px(8)),
+                    justify_content: JustifyContent::Center,
                     ..default()
                 },
-                children![(
-                    SendButton,
-                    button(
-                        ButtonProps {
-                            variant: ButtonVariant::Primary,
-                            ..default()
-                        },
-                        (),
-                        Spawn((Text::new("Start"), ThemedText))
-                    ),
-                    observe(
-                        |_event: On<Activate>, mut send_message: MessageWriter<SendMessage>| {
-                            send_message.write(SendMessage::new("给我讲一个故事。"));
-                        }
-                    )
-                )]
-            )
-        ],
+                Children::spawn(Spawn((
+                    Node {
+                        width: px(200),
+                        ..default()
+                    },
+                    children![(
+                        SendButton,
+                        button(
+                            ButtonProps {
+                                variant: ButtonVariant::Primary,
+                                ..default()
+                            },
+                            (),
+                            Spawn((Text::new("Start"), ThemedText))
+                        ),
+                        observe(
+                            |_event: On<Activate>, mut send_message: MessageWriter<SendMessage>| {
+                                send_message.write(SendMessage::new("给我讲一个故事。"));
+                            }
+                        )
+                    )],
+                ))),
+            ));
+        })),
     )
 }
 
