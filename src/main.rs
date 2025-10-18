@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod ai;
+mod ui_scroll;
 
 use std::fs;
 
@@ -16,6 +17,7 @@ use bevy::{
 };
 
 use ai::{AiPlugin, ReceiveMessage, SendMessage};
+use ui_scroll::UiScrollPlugin;
 
 const DEFAULT_FONT_PATH: &str = "assets/fonts/NotoSansSC-Regular.ttf";
 
@@ -28,16 +30,15 @@ struct MessageText;
 fn ui() -> impl Bundle {
     (
         Node {
+            width: percent(100),
+            height: percent(100),
             flex_direction: FlexDirection::Column,
             overflow: Overflow::scroll_y(),
             ..default()
         },
         children![
             (
-                Node {
-                    width: Val::Vw(100.0),
-                    ..default()
-                },
+                Node::default(),
                 children![(MessageText, Text::new(""))]
             ),
             (
@@ -83,7 +84,7 @@ fn setup_ui(mut commands: Commands) {
 
 fn main() {
     let mut app = App::new();
-    app.add_plugins((DefaultPlugins, FeathersPlugins, AiPlugin));
+    app.add_plugins((DefaultPlugins, FeathersPlugins, AiPlugin, UiScrollPlugin));
 
     let font_data = fs::read(DEFAULT_FONT_PATH).unwrap();
     let asset = Font::try_from_bytes(font_data).unwrap();
