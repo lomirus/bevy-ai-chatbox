@@ -16,6 +16,7 @@ use bevy::{
     picking::hover::Hovered,
     prelude::*,
     ui_widgets::{Activate, ControlOrientation, CoreScrollbarThumb, Scrollbar, observe},
+    window::WindowResolution,
 };
 
 use ai::{AiPlugin, ReceiveMessage, SendMessage};
@@ -47,14 +48,18 @@ fn message_box(role: MessageRole, content: String, is_streaming: bool) -> impl B
         },
         children![(
             Node {
-                border: UiRect::all(px(2)),
+                padding: UiRect::all(px(8)),
                 ..default()
             },
-            BorderColor::all(match role {
-                System => Srgba::hex("#E6A23C").unwrap(),
-                User => Srgba::hex("#67C23A").unwrap(),
-                Assistant => Srgba::hex("#409EFF").unwrap(),
-            }),
+            BorderRadius::all(px(8)),
+            BackgroundColor(
+                match role {
+                    System => Srgba::hex("#E6A23C").unwrap(),
+                    User => Srgba::hex("#67C23A").unwrap(),
+                    Assistant => Srgba::hex("#409EFF").unwrap(),
+                }
+                .into()
+            ),
             Children::spawn(SpawnWith(move |parent: &mut ChildSpawner| {
                 if is_streaming {
                     parent.spawn((Text::new(content), StreamingMessage));
@@ -101,7 +106,9 @@ fn ui(messages: Vec<deepseek_api::Message>) -> impl Bundle {
                     Dialog,
                     Node {
                         flex_direction: FlexDirection::Column,
+                        row_gap: px(8),
                         overflow: Overflow::scroll(),
+                        padding: UiRect::all(px(8)),
                         ..default()
                     },
                     Children::spawn(SpawnIter(messages.into_iter().map(|message| {
@@ -234,7 +241,19 @@ fn setup_ui(mut commands: Commands, messages: Res<ai::Dialog>) {
 
 fn main() {
     let mut app = App::new();
-    app.add_plugins((DefaultPlugins, FeathersPlugins, AiPlugin, UiScrollPlugin));
+    app.add_plugins((
+        DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                resolution: WindowResolution::new(480, 720),
+                position: WindowPosition::Centered(MonitorSelection::Primary),
+                ..default()
+            }),
+            ..default()
+        }),
+        FeathersPlugins,
+        AiPlugin,
+        UiScrollPlugin,
+    ));
 
     let font_data = fs::read(DEFAULT_FONT_PATH).unwrap();
     let asset = Font::try_from_bytes(font_data).unwrap();
