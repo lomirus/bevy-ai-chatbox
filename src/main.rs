@@ -12,7 +12,7 @@ use bevy::{
         theme::{ThemedText, UiTheme},
     },
     prelude::*,
-    ui::Pressed,
+    ui_widgets::{Activate, observe},
 };
 
 use ai::{AiPlugin, ReceiveMessage, SendMessage};
@@ -55,20 +55,15 @@ fn ui() -> impl Bundle {
                         (),
                         Spawn((Text::new("Start"), ThemedText))
                     ),
+                    observe(
+                        |_event: On<Activate>, mut send_message: MessageWriter<SendMessage>| {
+                            send_message.write(SendMessage::new("给我讲一个故事。"));
+                        }
+                    )
                 )]
             )
         ],
     )
-}
-
-fn on_button_click(
-    event: On<Add, Pressed>,
-    mut button_query: Query<(), With<SendButton>>,
-    mut send_message: MessageWriter<SendMessage>,
-) {
-    if button_query.get_mut(event.event_target()).is_ok() {
-        send_message.write(SendMessage::new("给我讲一个故事。"));
-    }
 }
 
 fn update_text(
@@ -98,6 +93,5 @@ fn main() {
     app.insert_resource(UiTheme(create_dark_theme()))
         .add_systems(Startup, setup_ui)
         .add_systems(Update, update_text)
-        .add_observer(on_button_click)
         .run();
 }
