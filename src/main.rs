@@ -6,6 +6,7 @@ mod ui_scroll;
 use std::fs;
 
 use bevy::{
+    ecs::query::QuerySingleError,
     feathers::{
         FeathersPlugins,
         controls::{ButtonProps, ButtonVariant, button},
@@ -25,9 +26,31 @@ const DEFAULT_FONT_PATH: &str = "assets/fonts/NotoSansSC-Regular.ttf";
 struct SendButton;
 
 #[derive(Component)]
-struct MessageText;
+enum MessageRole {
+    System,
+    User,
+    Assistant,
+}
 
-fn ui() -> impl Bundle {
+#[derive(Component)]
+struct StreamingMessage;
+
+impl From<deepseek_api::Role> for MessageRole {
+    fn from(value: deepseek_api::Role) -> Self {
+        use deepseek_api::Role::*;
+        match value {
+            System => MessageRole::System,
+            User => MessageRole::User,
+            Assistant => MessageRole::Assistant,
+            Tool => unreachable!(),
+        }
+    }
+}
+
+#[derive(Component)]
+struct Dialog;
+
+fn ui(messages: Vec<deepseek_api::Message>) -> impl Bundle {
     (
         Node {
             width: percent(100),
@@ -38,12 +61,19 @@ fn ui() -> impl Bundle {
         },
         children![
             (
-                Node::default(),
-                children![(MessageText, Text::new(""))]
+                Dialog,
+                Node {
+                    flex_direction: FlexDirection::Column,
+                    ..default()
+                },
+                Children::spawn(SpawnIter(messages.into_iter().map(|message| (
+                    Into::<MessageRole>::into(message.role),
+                    Text::new(&message.content),
+                ))))
             ),
             (
                 Node {
-                    width: Val::Px(200.0),
+                    width: px(200),
                     ..default()
                 },
                 children![(
@@ -67,19 +97,66 @@ fn ui() -> impl Bundle {
     )
 }
 
-fn update_text(
-    mut receive_message: MessageReader<ReceiveMessage>,
-    mut text_query: Query<&mut Text, With<MessageText>>,
+fn update_send_message(
+    mut send_message: MessageReader<SendMessage>,
+    mut dialog: Query<Entity, With<Dialog>>,
+    mut commands: Commands,
 ) {
-    let mut text = text_query.single_mut().unwrap();
-    for message in receive_message.read() {
-        text.0 += &message.0;
+    let dialog = dialog.single_mut().unwrap();
+
+    for send_message in send_message.read() {
+        let message_box = commands
+            .spawn((Node::default(), children![Text::new(&send_message.0)]))
+            .id();
+        commands.entity(dialog).add_child(message_box);
     }
 }
 
-fn setup_ui(mut commands: Commands) {
+fn update_receive_message(
+    mut receive_message: MessageReader<ReceiveMessage>,
+    mut dialog: Query<Entity, With<Dialog>>,
+    mut message_query: Query<(Entity, &mut Text), With<StreamingMessage>>,
+    mut commands: Commands,
+) {
+    let dialog = dialog.single_mut().unwrap();
+    let receive_message = receive_message.read();
+    if receive_message.len() == 0 {
+        return;
+    }
+
+    match message_query.single_mut() {
+        Ok((entity, mut text)) => {
+            for receive_message in receive_message {
+                text.0 += &receive_message.content;
+                if receive_message.finished {
+                    commands.entity(entity).remove::<StreamingMessage>();
+                }
+            }
+        }
+        Err(QuerySingleError::NoEntities(_)) => {
+            let mut text = Text::new("");
+            let mut is_finished = false;
+            for receive_message in receive_message {
+                text.0 += &receive_message.content;
+                if receive_message.finished {
+                    is_finished = true;
+                }
+            }
+            let message_box = if is_finished {
+                commands.spawn((MessageRole::Assistant, text))
+            } else {
+                commands.spawn((MessageRole::Assistant, StreamingMessage, text))
+            }
+            .id();
+            commands.entity(dialog).add_child(message_box);
+        }
+        _ => unreachable!(),
+    };
+}
+
+fn setup_ui(mut commands: Commands, messages: Res<ai::Dialog>) {
     commands.spawn(Camera2d);
-    commands.spawn(ui());
+    commands.spawn(ui(messages.0.clone()));
 }
 
 fn main() {
@@ -93,6 +170,6 @@ fn main() {
 
     app.insert_resource(UiTheme(create_dark_theme()))
         .add_systems(Startup, setup_ui)
-        .add_systems(Update, update_text)
+        .add_systems(Update, (update_send_message, update_receive_message))
         .run();
 }

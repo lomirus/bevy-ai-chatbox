@@ -1,10 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{
-    Model,
-    response::fields::{FinishReason, Role},
-};
+use crate::{Model, Role, response::fields::FinishReason};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Chunk {

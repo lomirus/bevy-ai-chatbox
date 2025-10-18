@@ -4,11 +4,11 @@ mod response;
 use async_stream::stream;
 use futures::Stream;
 use request::ChatCompletionRequest;
-use response::{streaming::Chunk, Response};
+use response::{Response, streaming::Chunk};
 use serde::{Deserialize, Serialize};
 
 pub use request::Message;
-pub use response::{streaming, FinishReason};
+pub use response::{FinishReason, streaming};
 
 const API_URL: &str = "https://api.deepseek.com/chat/completions";
 
@@ -18,6 +18,18 @@ pub enum Model {
     DeepSeekChat,
     #[serde(rename = "deepseek-reasoner")]
     DeepSeekReasoner,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum Role {
+    #[serde(rename = "system")]
+    System,
+    #[serde(rename = "user")]
+    User,
+    #[serde(rename = "assistant")]
+    Assistant,
+    #[serde(rename = "tool")]
+    Tool,
 }
 
 pub struct Client {

@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::Role;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Message {
     content: String,
@@ -54,10 +56,4 @@ pub struct Usage {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CompletionTokensDetails {
     reasoning_tokens: u64,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum Role {
-    #[serde(rename = "assistant")]
-    Assistant,
 }

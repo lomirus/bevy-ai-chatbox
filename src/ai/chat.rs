@@ -12,10 +12,13 @@ pub(crate) struct TokioRuntime(pub(crate) tokio::runtime::Runtime);
 pub(crate) struct StreamReceiver(Receiver<Choice>);
 
 #[derive(Message, Deref)]
-pub(crate) struct SendMessage(String);
+pub(crate) struct SendMessage(pub(crate) String);
 
-#[derive(Message, Deref)]
-pub(crate) struct ReceiveMessage(pub(crate) String);
+#[derive(Message)]
+pub(crate) struct ReceiveMessage {
+    pub(crate) content: String,
+    pub(crate) finished: bool,
+}
 
 impl SendMessage {
     pub(crate) fn new(message: &str) -> Self {
@@ -60,14 +63,20 @@ pub(crate) fn read_stream(
 ) {
     if let Some(receiver) = stream_receiver {
         for chunk in receiver.0.try_iter() {
+            receive_message.write(ReceiveMessage {
+                content: chunk.delta.content,
+                finished: chunk.finish_reason.is_some(),
+            });
             match chunk.finish_reason {
                 Some(FinishReason::Stop) => {
                     commands.remove_resource::<StreamReceiver>();
                     break;
                 }
-                _ => {
-                    receive_message.write(ReceiveMessage(chunk.delta.content));
+                Some(reason) => {
+                    error!("{:?}", reason);
+                    break;
                 }
+                None => (),
             }
         }
     }

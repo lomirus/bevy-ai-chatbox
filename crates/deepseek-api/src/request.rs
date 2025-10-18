@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::Model;
+use crate::{Model, Role};
 
 #[derive(Serialize, Deserialize)]
 pub struct ChatCompletionRequest {
@@ -11,8 +11,8 @@ pub struct ChatCompletionRequest {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Message {
-    content: String,
-    role: Role,
+    pub content: String,
+    pub role: Role,
 }
 
 impl Message {
@@ -43,16 +43,4 @@ impl Message {
             role: Role::Tool,
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-enum Role {
-    #[serde(rename = "system")]
-    System,
-    #[serde(rename = "user")]
-    User,
-    #[serde(rename = "assistant")]
-    Assistant,
-    #[serde(rename = "tool")]
-    Tool,
 }
