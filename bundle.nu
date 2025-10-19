@@ -15,5 +15,6 @@ cp -r assets dist/
 cp $"target/release/($filename)" dist/
 # Clean generated files.
 rm --force dist/config.ron
+rm --force dist/dialog.ron
 
 print "The packaged files have been successfully output to dist/"
