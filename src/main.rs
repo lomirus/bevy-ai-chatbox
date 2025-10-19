@@ -20,6 +20,7 @@ fn main() {
     app.add_plugins((
         DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
+                title: "Bevy AI ChatBox".to_string(),
                 resolution: WindowResolution::new(480, 720),
                 position: WindowPosition::Centered(MonitorSelection::Primary),
                 ..default()
