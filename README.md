@@ -20,3 +20,14 @@ nu bundle.nu
 ```
 
 Then, navigate to the `dist` directory and run the executable.
+
+## Configuration
+
+When you first run the application, it will generate `config.ron` and `dialog.ron` files in the same directory.
+
+You must edit these files before the app will work:
+
+1.  `config.ron`: Add your DeepSeek API key here.
+2.  `dialog.ron`: Add your desired system prompt here.
+
+You must restart the application after updating these files for the changes to take effect.
