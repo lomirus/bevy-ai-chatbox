@@ -15,6 +15,7 @@ use bevy::{
     },
     picking::hover::Hovered,
     prelude::*,
+    text::LineHeight,
     ui_widgets::{Activate, ControlOrientation, CoreScrollbarThumb, Scrollbar, observe},
     window::WindowResolution,
 };
@@ -24,11 +25,16 @@ use ui_scroll::UiScrollPlugin;
 
 use crate::ui_scroll::GRAY1;
 
+const TEXT_COLOR: Color = Color::Srgba(Srgba::rgb(0.9764706, 0.98039216, 0.9843137));
+const BUBBLE_BACKGROUND_COLOR: Color = Color::Srgba(Srgba::rgb(0.17254902, 0.17254902, 0.18039216));
+const BACKGROUND_COLOR: Color = Color::Srgba(Srgba::rgb(0.08235294, 0.08235294, 0.09019608));
+
 const DEFAULT_FONT_PATH: &str = "assets/fonts/NotoSansSC-Regular.ttf";
 
 #[derive(Component)]
 struct SendButton;
-#[derive(Component)]
+
+#[derive(Component, Clone, Copy)]
 enum MessageRole {
     System,
     User,
@@ -37,38 +43,49 @@ enum MessageRole {
 
 fn message_box(role: MessageRole, content: String, is_streaming: bool) -> impl Bundle + use<> {
     use MessageRole::*;
+
     (
         Node {
             justify_content: match role {
-                System => JustifyContent::Center,
+                System => unreachable!(),
                 User => JustifyContent::End,
                 Assistant => JustifyContent::Start,
             },
             ..default()
         },
+        role,
         children![(
             Node {
-                padding: UiRect::all(px(8)),
+                padding: UiRect::axes(px(16), px(10)),
+                align_items: AlignItems::Center,
                 ..default()
             },
-            BorderRadius::all(px(8)),
-            BackgroundColor(
-                match role {
-                    System => Srgba::hex("#E6A23C").unwrap(),
-                    User => Srgba::hex("#67C23A").unwrap(),
-                    Assistant => Srgba::hex("#409EFF").unwrap(),
-                }
-                .into()
-            ),
+            BorderRadius::all(px(22)),
+            BackgroundColor(match role {
+                System => unreachable!(),
+                User => BUBBLE_BACKGROUND_COLOR,
+                Assistant => BACKGROUND_COLOR,
+            }),
             Children::spawn(SpawnWith(move |parent: &mut ChildSpawner| {
+                let text_color = TextColor(match role {
+                    System => unreachable!(),
+                    User => TEXT_COLOR,
+                    Assistant => TEXT_COLOR,
+                });
+
+                let text_font = TextFont {
+                    font_size: 16.0,
+                    line_height: LineHeight::Px(24.0),
+                    ..default()
+                };
+
                 if is_streaming {
-                    parent.spawn((Text::new(content), StreamingMessage));
+                    parent.spawn((Text::new(content), text_color, text_font, StreamingMessage));
                 } else {
-                    parent.spawn(Text::new(content));
+                    parent.spawn((Text::new(content), text_color, text_font));
                 }
             })),
         )],
-        role,
     )
 }
 
@@ -100,6 +117,7 @@ fn ui(messages: Vec<deepseek_api::Message>) -> impl Bundle {
             grid_template_rows: vec![RepeatedGridTrack::flex(1, 1.), RepeatedGridTrack::auto(1)],
             ..default()
         },
+        BackgroundColor(Srgba::hex("#151517").unwrap().into()),
         Children::spawn(SpawnWith(|parent: &mut RelatedSpawner<ChildOf>| {
             let scroll_area_id = parent
                 .spawn((
@@ -111,9 +129,14 @@ fn ui(messages: Vec<deepseek_api::Message>) -> impl Bundle {
                         padding: UiRect::all(px(8)),
                         ..default()
                     },
-                    Children::spawn(SpawnIter(messages.into_iter().map(|message| {
-                        message_box(message.role.into(), message.content, false)
-                    }))),
+                    Children::spawn(SpawnIter(
+                        messages
+                            .into_iter()
+                            .filter(|message| message.role != deepseek_api::Role::System)
+                            .map(|message| {
+                                message_box(message.role.into(), message.content, false)
+                            }),
+                    )),
                 ))
                 .id();
 
