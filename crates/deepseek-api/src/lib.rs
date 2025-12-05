@@ -64,6 +64,7 @@ pub struct Client {
 }
 
 impl Client {
+    #[must_use]
     pub fn new(model: Model, api_key: &str) -> Self {
         Self {
             model,
@@ -105,6 +106,7 @@ impl Client {
         resp.json::<Response>().await.unwrap()
     }
 
+    #[must_use]
     pub async fn streaming_chat(&self, messages: Vec<Message>) -> impl Stream<Item = Chunk> {
         let client = reqwest::Client::new();
         let mut resp = client
@@ -143,6 +145,7 @@ impl Client {
         }
     }
 
+    #[must_use]
     /// Get user current balance
     pub async fn user_balance(&self) -> UserBalance {
         let client = reqwest::Client::new();
