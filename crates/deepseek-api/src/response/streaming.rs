@@ -23,7 +23,7 @@ pub struct Choice {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Delta {
-    pub content: String,
+    pub content: Option<String>,
     pub reasoning_content: Option<String>,
     pub role: Option<Role>,
 }

@@ -64,7 +64,7 @@ pub(crate) fn read_stream(
     if let Some(receiver) = stream_receiver {
         for chunk in receiver.0.try_iter() {
             receive_message.write(ReceiveMessage {
-                content: chunk.delta.content,
+                content: chunk.delta.content.unwrap_or_default(),
                 finished: chunk.finish_reason.is_some(),
             });
             match chunk.finish_reason {
