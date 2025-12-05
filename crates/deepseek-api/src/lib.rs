@@ -10,7 +10,9 @@ use serde::{Deserialize, Serialize};
 pub use request::Message;
 pub use response::{FinishReason, streaming};
 
-const API_URL: &str = "https://api.deepseek.com/chat/completions";
+use crate::response::UserBalance;
+
+const BASE_URL: &str = "https://api.deepseek.com";
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Model {
@@ -49,7 +51,7 @@ impl Client {
     pub async fn chat(&self, messages: Vec<Message>) -> Response {
         let client = reqwest::Client::new();
         let resp = client
-            .post(API_URL)
+            .post(format!("{BASE_URL}/chat/completions"))
             .header("Content-Type", "application/json")
             .header("Accept", "application/json")
             .header("Authorization", format!("Bearer {}", self.api_key))
@@ -70,7 +72,7 @@ impl Client {
     pub async fn streaming_chat(&self, messages: Vec<Message>) -> impl Stream<Item = Chunk> {
         let client = reqwest::Client::new();
         let mut resp = client
-            .post(API_URL)
+            .post(format!("{BASE_URL}/chat/completions"))
             .header("Content-Type", "application/json")
             .header("Accept", "application/json")
             .header("Authorization", format!("Bearer {}", self.api_key))
@@ -97,5 +99,18 @@ impl Client {
                 }
             }
         }
+    }
+
+    /// Get user current balance
+    pub async fn user_balance(&self) -> UserBalance {
+        let client = reqwest::Client::new();
+        let resp = client
+            .get(format!("{BASE_URL}/user/balance"))
+            .header("Accept", "application/json")
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .send()
+            .await
+            .unwrap();
+        resp.json().await.unwrap()
     }
 }
