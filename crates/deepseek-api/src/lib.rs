@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 pub use request::Message;
 pub use response::{FinishReason, streaming};
 
-use crate::response::UserBalance;
+use crate::{request::Thinking, response::UserBalance};
 
 const BASE_URL: &str = "https://api.deepseek.com";
 
@@ -35,14 +35,16 @@ pub enum Role {
 }
 
 pub struct Client {
-    model: Model,
-    api_key: String,
+    pub model: Model,
+    pub thinking: Option<Thinking>,
+    pub api_key: String,
 }
 
 impl Client {
     pub fn new(model: Model, api_key: &str) -> Self {
         Self {
             model,
+            thinking: None,
             api_key: api_key.to_string(),
         }
     }
@@ -59,6 +61,7 @@ impl Client {
                 serde_json::to_string(&ChatCompletionRequest {
                     model: self.model.clone(),
                     messages,
+                    thinking: self.thinking.clone(),
                     stream: false,
                 })
                 .unwrap(),
@@ -80,6 +83,7 @@ impl Client {
                 serde_json::to_string(&ChatCompletionRequest {
                     model: self.model.clone(),
                     messages,
+                    thinking: self.thinking.clone(),
                     stream: true,
                 })
                 .unwrap(),

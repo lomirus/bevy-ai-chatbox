@@ -6,6 +6,7 @@ use crate::{Model, Role};
 pub struct ChatCompletionRequest {
     pub messages: Vec<Message>,
     pub model: Model,
+    pub thinking: Option<Thinking>,
     pub stream: bool,
 }
 
@@ -43,4 +44,31 @@ impl Message {
             role: Role::Tool,
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct Thinking {
+    pub r#type: ThinkingType,
+}
+
+impl Thinking {
+    pub const fn enabled() -> Self {
+        Thinking {
+            r#type: ThinkingType::Enabled,
+        }
+    }
+
+    pub const fn disabled() -> Self {
+        Thinking {
+            r#type: ThinkingType::Disabled,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub enum ThinkingType {
+    #[serde(rename = "enabled")]
+    Enabled,
+    #[serde(rename = "disabled")]
+    Disabled,
 }
