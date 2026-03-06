@@ -5,13 +5,13 @@ use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Resource, Deref)]
-pub(crate) struct Dialog(pub(crate) Vec<deepseek_api::Message>);
+pub(crate) struct Dialog(pub(crate) Vec<deepseek_api::message::Message>);
 
 impl Default for Dialog {
     fn default() -> Self {
         Self(vec![
-            deepseek_api::Message::system("你是一个智能助手。"),
-            deepseek_api::Message::user("你好！"),
+            deepseek_api::message::Message::system("你是一个智能助手。"),
+            deepseek_api::message::Message::user("你好！"),
         ])
     }
 }
@@ -21,7 +21,8 @@ impl Dialog {
         match fs::read("dialog.ron") {
             Ok(file) => {
                 let dialog_str = String::from_utf8(file).unwrap();
-                let dialog: Vec<deepseek_api::Message> = ron::from_str(&dialog_str).unwrap();
+                let dialog: Vec<deepseek_api::message::Message> =
+                    ron::from_str(&dialog_str).unwrap();
                 Dialog(dialog)
             }
             Err(err) => match err.kind() {

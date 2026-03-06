@@ -54,7 +54,7 @@ fn setup_ui(mut commands: Commands, messages: Res<ai::Dialog>) {
     commands.spawn(ui(messages.0.clone()));
 }
 
-fn ui(messages: Vec<deepseek_api::Message>) -> impl Bundle {
+fn ui(messages: Vec<deepseek_api::message::Message>) -> impl Bundle {
     (
         Node {
             display: Display::Grid,
@@ -79,9 +79,19 @@ fn ui(messages: Vec<deepseek_api::Message>) -> impl Bundle {
                     Children::spawn(SpawnIter(
                         messages
                             .into_iter()
-                            .filter(|message| message.role != deepseek_api::Role::System)
+                            .filter(|message| message.role() != deepseek_api::Role::System)
                             .map(|message| {
-                                message_box(message.role.into(), message.content, false)
+                                use deepseek_api::message::Message;
+                                message_box(
+                                    message.role().into(),
+                                    match message {
+                                        Message::System(system) => system.content,
+                                        Message::User(user) => user.content,
+                                        Message::Assistant(assistant) => assistant.content,
+                                        Message::Tool(tool) => tool.content,
+                                    },
+                                    false,
+                                )
                             }),
                     )),
                 ))
@@ -228,9 +238,13 @@ fn update_receive_message(
     match text_query.single_mut() {
         Ok((entity, mut text)) => {
             for receive_message in receive_message {
-                text.0 += &receive_message.content;
-                if receive_message.finished {
-                    commands.entity(entity).remove::<StreamingMessage>();
+                match receive_message {
+                    ReceiveMessage::Content(content) => {
+                        text.0 += content;
+                    }
+                    ReceiveMessage::Finished => {
+                        commands.entity(entity).remove::<StreamingMessage>();
+                    }
                 }
             }
         }
@@ -238,9 +252,13 @@ fn update_receive_message(
             let mut text = String::new();
             let mut is_finished = false;
             for receive_message in receive_message {
-                text += &receive_message.content;
-                if receive_message.finished {
-                    is_finished = true;
+                match receive_message {
+                    ReceiveMessage::Content(content) => {
+                        text += content;
+                    }
+                    ReceiveMessage::Finished => {
+                        is_finished = true;
+                    }
                 }
             }
             let message_box = commands

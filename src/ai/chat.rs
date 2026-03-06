@@ -1,23 +1,24 @@
 use bevy::prelude::*;
 use crossbeam_channel::Receiver;
-use futures::{StreamExt, pin_mut};
+use futures::pin_mut;
 
 use super::{Config, Dialog};
-use deepseek_api::{FinishReason, Model, streaming::Choice};
+use deepseek_api::AsyncIteratorNext;
+use deepseek_api::{Delta, Model};
 
 #[derive(Resource, Deref)]
 pub(crate) struct TokioRuntime(pub(crate) tokio::runtime::Runtime);
 
 #[derive(Resource)]
-pub(crate) struct StreamReceiver(Receiver<Choice>);
+pub(crate) struct StreamReceiver(Receiver<ReceiveMessage>);
 
-#[derive(Message, Deref)]
+#[derive(Message, Clone, Deref)]
 pub(crate) struct SendMessage(pub(crate) String);
 
-#[derive(Message)]
-pub(crate) struct ReceiveMessage {
-    pub(crate) content: String,
-    pub(crate) finished: bool,
+#[derive(Message, Clone)]
+pub(crate) enum ReceiveMessage {
+    Content(String),
+    Finished,
 }
 
 impl SendMessage {
@@ -39,19 +40,27 @@ pub(crate) fn on_send_message(
         return;
     }
     if let Some(message) = send_message.read().next() {
-        let client = deepseek_api::Client::new(Model::DeepSeekChat, &config.api_key);
-        dialog.0.push(deepseek_api::Message::user(message));
-        let messages = dialog.clone();
+        let message = message.clone();
+        let mut client = deepseek_api::Client::new(Model::DeepSeekChat, &config.api_key);
+
+        dialog
+            .0
+            .push(deepseek_api::message::Message::user(&message));
         let (tx, rx) = crossbeam_channel::unbounded();
         commands.insert_resource(StreamReceiver(rx));
 
         tokio_runtime.spawn(async move {
-            let stream = client.streaming_chat(messages).await;
+            let stream = client.streaming_chat(&message).await;
             pin_mut!(stream);
-            while let Some(chunk) = stream.next().await {
-                assert_eq!(chunk.choices.len(), 1);
-                tx.send(chunk.choices[0].clone()).unwrap();
+            while let Some(delta) = stream.next().await {
+                match delta {
+                    Delta::Content { content, .. } => {
+                        tx.send(ReceiveMessage::Content(content)).unwrap()
+                    }
+                    _ => unreachable!(),
+                }
             }
+            tx.send(ReceiveMessage::Finished)
         });
     }
 }
@@ -63,20 +72,10 @@ pub(crate) fn read_stream(
 ) {
     if let Some(receiver) = stream_receiver {
         for chunk in receiver.0.try_iter() {
-            receive_message.write(ReceiveMessage {
-                content: chunk.delta.content.unwrap_or_default(),
-                finished: chunk.finish_reason.is_some(),
-            });
-            match chunk.finish_reason {
-                Some(FinishReason::Stop) => {
-                    commands.remove_resource::<StreamReceiver>();
-                    break;
-                }
-                Some(reason) => {
-                    error!("{:?}", reason);
-                    break;
-                }
-                None => (),
+            receive_message.write(chunk.clone());
+            if let ReceiveMessage::Finished = chunk {
+                commands.remove_resource::<StreamReceiver>();
+                break;
             }
         }
     }
