@@ -112,11 +112,11 @@ fn ui(messages: Vec<deepseek_api::message::Message>) -> impl Bundle {
                 Children::spawn(Spawn((
                     Node {
                         position_type: PositionType::Absolute,
+                        border_radius: BorderRadius::all(px(4)),
                         ..default()
                     },
                     Hovered::default(),
                     BackgroundColor(GRAY1.into()),
-                    BorderRadius::all(px(4)),
                     CoreScrollbarThumb,
                 ))),
             ));
@@ -173,9 +173,9 @@ fn message_box(role: MessageRole, content: String, is_streaming: bool) -> impl B
             Node {
                 padding: UiRect::axes(px(16), px(10)),
                 align_items: AlignItems::Center,
+                border_radius: BorderRadius::all(px(22)),
                 ..default()
             },
-            BorderRadius::all(px(22)),
             BackgroundColor(match role {
                 System => unreachable!(),
                 User => BUBBLE_BACKGROUND_COLOR,
@@ -190,14 +190,24 @@ fn message_box(role: MessageRole, content: String, is_streaming: bool) -> impl B
 
                 let text_font = TextFont {
                     font_size: 16.0,
-                    line_height: LineHeight::Px(24.0),
                     ..default()
                 };
 
                 if is_streaming {
-                    parent.spawn((Text::new(content), text_color, text_font, StreamingMessage));
+                    parent.spawn((
+                        Text::new(content),
+                        text_color,
+                        text_font,
+                        LineHeight::Px(24.0),
+                        StreamingMessage,
+                    ));
                 } else {
-                    parent.spawn((Text::new(content), text_color, text_font));
+                    parent.spawn((
+                        Text::new(content),
+                        text_color,
+                        text_font,
+                        LineHeight::Px(24.0),
+                    ));
                 }
             })),
         )],
