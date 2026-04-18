@@ -1,7 +1,7 @@
 use std::{fs, io::ErrorKind};
 
 use bevy::prelude::*;
-use ron::ser::PrettyConfig;
+use ron::{Options, extensions::Extensions, ser::PrettyConfig};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Resource, Deref)]
@@ -18,18 +18,20 @@ impl Default for Dialog {
 
 impl Dialog {
     pub(crate) fn get_or_init() -> Dialog {
+        let ron = Options::default()
+            .with_default_extension(Extensions::UNWRAP_VARIANT_NEWTYPES);
+
         match fs::read("dialog.ron") {
             Ok(file) => {
                 let dialog_str = String::from_utf8(file).unwrap();
                 let dialog: Vec<deepseek_api::message::Message> =
-                    ron::from_str(&dialog_str).unwrap();
+                    ron.from_str(&dialog_str).unwrap();
                 Dialog(dialog)
             }
             Err(err) => match err.kind() {
                 ErrorKind::NotFound => {
                     let dialog: Dialog = Dialog::default();
-                    let dialog_str =
-                        ron::ser::to_string_pretty(&dialog.0, PrettyConfig::default()).unwrap();
+                    let dialog_str = ron.to_string_pretty(&dialog.0, PrettyConfig::default()).unwrap();
                     fs::write("dialog.ron", dialog_str).unwrap();
                     dialog
                 }

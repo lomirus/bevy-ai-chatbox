@@ -17,7 +17,7 @@ features = [
 
 [dependencies.deepseek-api]
 git = "https://github.com/lomirus/deepseek-api.git"
-rev = "34d16c316f3f3bfd4055a8841a655220ee0afc00"
+rev = "89deacfd6503f5d533e65d6db159101ff7a7e6ee"
 
 [dependencies.log]
 version = "*"
